@@ -1,0 +1,125 @@
+name: CI - user-service
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.5'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.5'
+
+      - name: Build app
+        run: |
+          go mod tidy
+          go build -o user-service ./cmd/main.go
+
+  test:
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.5'
+
+      - name: Run tests and generate coverage
+        run: |
+          go test ./... -coverprofile=coverage.out
+          go tool cover -func=coverage.out
+          echo "coverage=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')" >> $GITHUB_ENV
+
+  sonarcloud:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SonarCloud analysis
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: .
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: guttosm_user-service
+          SONAR_ORGANIZATION: guttosm-personal-projects
+
+  migrate:
+    name: Run DB Migrations
+    runs-on: ubuntu-latest
+    needs: sonarcloud
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: userdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run goose migrations
+        run: |
+          docker run --rm \
+            --network host \
+            -v ${{ github.workspace }}/db/migrations:/migrations \
+            ghcr.io/pressly/goose \
+            -dir /migrations \
+            postgres "postgres://postgres:postgres@localhost:5432/userdb?sslmode=disable" up
+
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: migrate
+    if: startsWith(github.ref, 'refs/tags/v') # Only runs on version tags
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}:${GITHUB_REF##*/}
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME

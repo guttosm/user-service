@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user-service-app
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: user-db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgres/data
+
+  goose:
+    image: ghcr.io/pressly/goose
+    container_name: goose-migrations
+    depends_on:
+      - postgres
+    volumes:
+      - ./db/migrations:/migrations
+    entrypoint: >
+      /bin/sh -c "
+        sleep 5 &&
+        goose -dir /migrations postgres 'postgres://admin:admin@postgres:5432/user-db?sslmode=disable' up
+      "
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  pgdata:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./postgres-data
+      o: bind
+
+  mongo-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./mongo-data
+      o: bind
