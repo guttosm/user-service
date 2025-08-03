@@ -9,7 +9,7 @@
 *.log
 
 # Binaries (adjust name to your actual built file)
-url-shortener
+user-service
 
 # Coverage & test output
 *.cover
