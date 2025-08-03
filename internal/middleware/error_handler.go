@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/guttosm/user-service/internal/dto"
+	"github.com/guttosm/user-service/internal/domain/dto"
 )
 
 // ErrorHandler is a Gin middleware that captures any errors registered during

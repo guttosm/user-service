@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/guttosm/user-service/internal/auth"
-	"github.com/guttosm/user-service/internal/dto"
+	"github.com/guttosm/user-service/internal/domain/dto"
 	"github.com/guttosm/user-service/internal/middleware"
 )
 

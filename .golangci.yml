@@ -1,8 +1,12 @@
 version: "2"
+
 linters:
   enable:
-    - staticcheck
     - govet
     - errcheck
-    - gofmt
-    - revive
+    - staticcheck
+    - unused
+    - ineffassign
+    - gocyclo
+    - dupl
+    - misspell

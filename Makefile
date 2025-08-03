@@ -17,12 +17,12 @@ install:
 
 ## Run locally without Docker
 run:
-	@echo "🚀 Running $(APP_NAME)..."
+	@echo "Running $(APP_NAME)..."
 	go run ./cmd/main.go
 
 ## Build Go binary
 build:
-	@echo "🔨 Building $(APP_NAME)..."
+	@echo "Building $(APP_NAME)..."
 	go build -o $(APP_NAME) ./cmd/main.go
 
 ## Run tests with coverage
