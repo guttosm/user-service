@@ -20,7 +20,7 @@ jobs:
           go-version: '1.24.5'
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v8
         with:
           version: 'v2.3.1'
 
