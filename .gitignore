@@ -16,7 +16,6 @@ url-shortener
 coverage.out
 
 # Module cache & vendor folder (if not committed)
-pkg/
 vendor/
 
 # ─── Environment configs ────────────────────────────
