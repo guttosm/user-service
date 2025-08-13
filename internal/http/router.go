@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/guttosm/user-service/docs"
 	"github.com/guttosm/user-service/internal/middleware"
-	"github.com/guttosm/user-service/pkg/jwtutil"
+	"github.com/guttosm/user-service/internal/util/jwtutil"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )

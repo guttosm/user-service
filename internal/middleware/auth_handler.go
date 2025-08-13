@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	jwt "github.com/guttosm/user-service/pkg/jwtutil"
+	jwt "github.com/guttosm/user-service/internal/util/jwtutil"
 )
 
 // AuthMiddleware returns a Gin middleware that validates JWT Bearer tokens,

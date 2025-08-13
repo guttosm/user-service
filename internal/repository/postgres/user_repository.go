@@ -60,7 +60,7 @@ func NewUserRepository(db *sql.DB) *PostgresUserRepository {
 	return &PostgresUserRepository{db: db}
 }
 
-// Create inserts a new user into the "users" table using uuid_generate_v7() for the ID.
+// Create inserts a new user into the "users" table with auto-generated UUID v7.
 //
 // Parameters:
 //   - user (*model.User): The user object to be stored. ID is populated after insertion.
@@ -69,8 +69,8 @@ func NewUserRepository(db *sql.DB) *PostgresUserRepository {
 //   - error: Any error that occurred during the insert operation.
 func (r *PostgresUserRepository) Create(user *model.User) error {
 	query := `
-		INSERT INTO users (id, email, password, role)
-		VALUES (uuid_generate_v7(), $1, $2, $3)
+		INSERT INTO users (email, password, role)
+		VALUES ($1, $2, $3)
 		RETURNING id;
 	`
 	return r.db.QueryRow(query, user.Email, user.Password, user.Role).Scan(&user.ID)

@@ -12,6 +12,20 @@ services:
       - .env
     depends_on:
       - postgres
+      - goose
+
+  goose:
+    image: golang:1.24-alpine
+    container_name: goose-migrations
+    working_dir: /migrations
+    volumes:
+      - ./db/migrations:/migrations
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=host=postgres port=5432 user=admin password=admin dbname=user-db sslmode=disable
+    depends_on:
+      - postgres
+    command: sh -c "go install github.com/pressly/goose/v3/cmd/goose@latest && goose up"
 
   postgres:
     image: postgres:15-alpine
@@ -25,18 +39,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgres/data
 
-  goose:
-    image: ghcr.io/pressly/goose
-    container_name: goose-migrations
-    depends_on:
-      - postgres
-    volumes:
-      - ./db/migrations:/migrations
-    entrypoint: >
-      /bin/sh -c "
-        sleep 5 &&
-        goose -dir /migrations postgres 'postgres://admin:admin@postgres:5432/user-db?sslmode=disable' up
-      "
   mongodb:
     image: mongo:7
     container_name: mongodb
@@ -48,14 +50,5 @@ services:
 volumes:
   pgdata:
     driver: local
-    driver_opts:
-      type: none
-      device: ./postgres-data
-      o: bind
-
   mongo-data:
     driver: local
-    driver_opts:
-      type: none
-      device: ./mongo-data
-      o: bind

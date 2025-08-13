@@ -7,7 +7,7 @@ import (
 	"github.com/guttosm/user-service/internal/http"
 	"github.com/guttosm/user-service/internal/repository/mongo"
 	repository "github.com/guttosm/user-service/internal/repository/postgres"
-	"github.com/guttosm/user-service/pkg/jwtutil"
+	"github.com/guttosm/user-service/internal/util/jwtutil"
 )
 
 // InitializeApp sets up all dependencies of the application and returns

@@ -3,11 +3,12 @@ package auth
 import (
 	"context"
 	"errors"
+
 	"github.com/guttosm/user-service/internal/repository/mongo"
 
 	"github.com/guttosm/user-service/internal/domain/model"
 	repository "github.com/guttosm/user-service/internal/repository/postgres"
-	jwt "github.com/guttosm/user-service/pkg/jwtutil"
+	jwt "github.com/guttosm/user-service/internal/util/jwtutil"
 	"golang.org/x/crypto/bcrypt"
 )
 
