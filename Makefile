@@ -65,7 +65,7 @@ migrate:
 
 ## Docker: Build and run containers
 docker-up:
-	docker-compose up --build
+	docker-compose up --build -d
 
 ## Docker: Stop and remove containers
 docker-down:
