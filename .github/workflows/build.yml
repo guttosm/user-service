@@ -87,14 +87,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run goose migrations
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.5'
+
+      - name: Install goose
         run: |
-          docker run --rm \
-            --network host \
-            -v ${{ github.workspace }}/db/migrations:/migrations \
-            ghcr.io/pressly/goose \
-            -dir /migrations \
-            postgres "postgres://postgres:postgres@localhost:5432/userdb?sslmode=disable" up
+          go install github.com/pressly/goose/v3/cmd/goose@latest
+
+      - name: Run goose migrations
+        env:
+          GOOSE_DRIVER: postgres
+          GOOSE_DBSTRING: postgres://postgres:postgres@localhost:5432/userdb?sslmode=disable
+        run: |
+          $HOME/go/bin/goose -dir db/migrations up
 
   docker:
     name: Build Docker Image
