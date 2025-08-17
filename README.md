@@ -4,6 +4,8 @@
 
 ---
 
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=guttosm_user-service&metric=coverage)](https://sonarcloud.io/summary/new_code?id=guttosm_user-service)
+
 ## 🚀 Features
 
 - ✅ User registration and login
