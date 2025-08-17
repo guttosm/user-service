@@ -1,10 +1,10 @@
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=guttosm_user-service&metric=coverage)](https://sonarcloud.io/summary/new_code?id=guttosm_user-service)
+
 # 🔐 user-service
 
 **user-service** is a modular microservice written in Go responsible for handling user authentication, authorization, and identity management. It provides secure user registration, login, and JWT-based access control for distributed systems.
 
 ---
-
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=guttosm_user-service&metric=coverage)](https://sonarcloud.io/summary/new_code?id=guttosm_user-service)
 
 ## 🚀 Features
 
