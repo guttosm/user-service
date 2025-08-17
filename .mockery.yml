@@ -1,0 +1,35 @@
+# .mockery.yaml — importable mocks (Mockery v3.5.3)
+
+# keep your global prefs
+all: false
+dir: '{{.InterfaceDir}}'
+filename: mocks.go                     # default; overridden per-package below
+force-file-write: true
+formatter: goimports
+include-auto-generated: false
+log-level: info
+structname: '{{.Mock}}{{.InterfaceName}}'
+pkgname: '{{.SrcPackageName}}'         # default; overridden per-package below
+recursive: true
+require-template-schema-exists: true
+template: testify
+template-schema: '{{.Template}}.schema.json'
+
+packages:
+  github.com/guttosm/user-service/internal/util/jwtutil:
+    config:
+      dir: internal/mocks/jwtutil
+      filename: token_service_mock.go   # <-- no _test suffix
+      pkgname: mocks                    # <-- import as package "mocks"
+      structname: '{{.Mock}}{{.InterfaceName}}'
+    interfaces:
+      TokenService: {}
+
+  github.com/guttosm/user-service/internal/repository/postgres:
+    config:
+      dir: internal/mocks/repository
+      filename: user_repository_mock.go
+      pkgname: mocks
+      structname: '{{.Mock}}{{.InterfaceName}}'
+    interfaces:
+      UserRepository: {}

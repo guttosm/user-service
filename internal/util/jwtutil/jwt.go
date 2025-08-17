@@ -1,4 +1,3 @@
-// pkg/jwtutil/jwtutil.go
 package jwtutil
 
 import (
