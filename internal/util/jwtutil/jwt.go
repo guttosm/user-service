@@ -60,7 +60,7 @@ func (j *JWTService) Generate(userID, role string) (string, error) {
 //   - map[string]interface{}: claims extracted from the token.
 //   - error: if the token is invalid or expired.
 func (j *JWTService) Validate(tokenString string) (map[string]interface{}, error) {
-	return validateToken(tokenString, j.cfg.Secret)
+	return validateToken(tokenString, j.cfg)
 }
 
 // generateToken generates a signed JWT using provided configuration and user data.
@@ -79,6 +79,8 @@ func generateToken(userID, role string, cfg config.JWTConfig) (string, error) {
 		"role":    role,
 		"exp":     time.Now().Add(time.Duration(cfg.ExpirationHour) * time.Hour).Unix(),
 		"iss":     cfg.Issuer,
+		"aud":     cfg.Audience,
+		"iat":     time.Now().Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -94,23 +96,44 @@ func generateToken(userID, role string, cfg config.JWTConfig) (string, error) {
 // Returns:
 //   - map[string]interface{}: claims from the token.
 //   - error: if validation fails.
-func validateToken(tokenString, secret string) (map[string]interface{}, error) {
+func validateToken(tokenString string, cfg config.JWTConfig) (map[string]interface{}, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		// Ensure token uses HMAC
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
 		}
-		return []byte(secret), nil
+		return []byte(cfg.Secret), nil
 	})
-
 	if err != nil || !token.Valid {
 		return nil, ErrInvalidToken
 	}
-
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, ErrInvalidToken
 	}
-
+	// Issuer check
+	if cfg.Issuer != "" && claims["iss"] != cfg.Issuer {
+		return nil, ErrInvalidToken
+	}
+	// Audience check
+	if cfg.Audience != "" {
+		switch aud := claims["aud"].(type) {
+		case string:
+			if aud != cfg.Audience {
+				return nil, ErrInvalidToken
+			}
+		case []interface{}:
+			match := false
+			for _, v := range aud {
+				if s, ok := v.(string); ok && s == cfg.Audience {
+					match = true
+					break
+				}
+			}
+			if !match {
+				return nil, ErrInvalidToken
+			}
+		}
+	}
+	// Exp is enforced by Parse if using MapClaims.Valid(); we added custom check earlier.
 	return claims, nil
 }

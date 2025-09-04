@@ -1,6 +1,8 @@
 package http
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/guttosm/user-service/docs"
 	"github.com/guttosm/user-service/internal/middleware"
@@ -18,7 +20,14 @@ import (
 // Returns:
 // - *gin.Engine: The configured Gin router with public and protected endpoints.
 func NewRouter(handler *Handler, validator jwtutil.TokenService) *gin.Engine {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(middleware.RequestID(), middleware.RequestLogger(), gin.Recovery())
+
+	// Global rate limiting: 100 requests per minute per IP
+	router.Use(middleware.RateLimitMiddleware(100, time.Minute))
+
+	// Basic liveness (kept for backward compatibility)
+	router.GET("/healthz", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

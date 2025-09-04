@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/guttosm/user-service/internal/auth"
@@ -42,7 +44,9 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.Register(req.Email, req.Password, req.Role)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	user, err := h.authService.Register(ctx, req.Email, req.Password, req.Role)
 	if err != nil {
 		middleware.AbortWithError(c, http.StatusBadRequest, "Registration failed", err)
 		return
@@ -74,7 +78,9 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.Login(req.Email, req.Password)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	token, err := h.authService.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		middleware.AbortWithError(c, http.StatusUnauthorized, "Invalid credentials", err)
 		return

@@ -21,11 +21,7 @@ import (
 func TestGinAuthMiddleware_WithJWTService(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	cfg := config.JWTConfig{
-		Secret:         "gin-int-secret",
-		ExpirationHour: 1,
-		Issuer:         "user-service-int",
-	}
+	cfg := config.JWTConfig{Secret: "gin-int-secret", ExpirationHour: 1, Issuer: "user-service-int", Audience: "aud-int"}
 	svc := NewJWTService(cfg)
 
 	authMW := func(c *gin.Context) {
@@ -62,6 +58,7 @@ func TestGinAuthMiddleware_WithJWTService(t *testing.T) {
 
 	expiredCfg := cfg
 	expiredCfg.ExpirationHour = 0
+	wrongAudienceSvc := NewJWTService(config.JWTConfig{Secret: cfg.Secret, ExpirationHour: 1, Issuer: cfg.Issuer, Audience: "other-aud"})
 	expiredToken, err := generateToken("u-99", "ghost", expiredCfg)
 	require.NoError(t, err)
 	time.Sleep(1 * time.Second)
@@ -77,6 +74,11 @@ func TestGinAuthMiddleware_WithJWTService(t *testing.T) {
 			token:      validToken,
 			wantStatus: http.StatusOK,
 			wantUserID: "u-42",
+		},
+		{
+			name:       "wrong audience",
+			token:      func() string { tk, _ := wrongAudienceSvc.Generate("u-77", "user"); return tk }(),
+			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name:       "invalid secret",

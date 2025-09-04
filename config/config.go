@@ -41,6 +41,7 @@ type JWTConfig struct {
 	Secret         string
 	ExpirationHour int
 	Issuer         string
+	Audience       string
 }
 
 // AppConfig is the globally accessible configuration instance.
@@ -84,6 +85,7 @@ func LoadConfig() {
 			Secret:         viper.GetString("JWT_SECRET"),
 			ExpirationHour: viper.GetInt("JWT_EXPIRATION_HOUR"),
 			Issuer:         viper.GetString("JWT_ISSUER"),
+			Audience:       viper.GetString("JWT_AUDIENCE"),
 		},
 	}
 

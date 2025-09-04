@@ -10,12 +10,16 @@
 
 - ✅ User registration and login
 - 🔐 JWT token generation (access tokens)
-- 🧂 Password hashing with bcrypt
+- 🧂 Password hashing with bcrypt (configurable cost via BCRYPT_COST)
 - 🔑 Role-based authorization support
 - 🧱 Clean Architecture with modular domain/service layers
-- 🧪 Unit and integration tests using Testcontainers
+- 📨 Correlation ID propagation (X-Request-ID middleware)
+- � Context-aware repository & service calls (timeouts)
+- 🚦 In-memory IP rate limiting (configurable in code)
+- 🩺 Liveness (/healthz) & Readiness (/readyz) endpoints
+- �🧪 Unit and integration tests using Testcontainers
 - 🧼 GitHub Actions CI/CD (lint → build → test → migrate → Docker)
-- 📖 Swagger auto-generated API docs
+- 📖 Swagger auto-generated API docs (disabled manually in production recommended)
 
 ---
 
@@ -121,7 +125,7 @@ Or run migrations in CI via GitHub Actions.
 
 ## 📁 Project Structure
 
-```
+```text
 user-service/
 ├── cmd/                  # App entrypoint
 ├── internal/
@@ -146,3 +150,48 @@ user-service/
 MIT © 2025 Gustavo Moraes
 
 ---
+
+## 📡 API Endpoints (Core)
+
+| Method | Path        | Description            |
+|--------|-------------|------------------------|
+| GET    | /healthz    | Liveness probe         |
+| GET    | /readyz     | Readiness probe (DB)   |
+| POST   | /api/register | User registration    |
+| POST   | /api/login    | User authentication  |
+| GET    | /swagger/*any | API docs (dev only)  |
+
+All responses include an `X-Request-ID` header for tracing.
+
+Rate limiting returns HTTP 429 when exceeded.
+
+### Authentication
+
+JWT tokens include user id and role claims. Add future audience/issuer validation as needed.
+
+### Environment Variables (Key Ones)
+
+| Name | Purpose | Default |
+|------|---------|---------|
+| JWT_SECRET | HMAC signing secret | (required) |
+| JWT_EXPIRATION | Token TTL minutes | 60 |
+| BCRYPT_COST | Password hashing cost | 10 (library default) |
+| POSTGRES_DSN | Connection string | see docker-compose |
+
+Unset / mis-set critical vars cause startup failure.
+
+---
+
+## 🧪 Quality Checks
+
+Run static analysis to catch bugs and code smells early:
+
+```bash
+make vet           # Run go vet static analysis
+make staticcheck   # Run staticcheck (auto-installs if missing)
+make lint          # Run golangci-lint
+make analyze       # Run all static analysis tools above
+```
+
+---
+

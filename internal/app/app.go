@@ -39,6 +39,8 @@ func InitializeApp() (*gin.Engine, func(), error) {
 
 	handler := http.NewHandler(authService)
 	router := http.NewRouter(handler, tokenService)
+	// Health check endpoint
+	http.NewHealthHandler(pgDB.Ping).Register(router)
 
 	// Cleanup resources on shutdown
 	cleanup := func() {

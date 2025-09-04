@@ -3,10 +3,11 @@ package auth
 import (
 	"context"
 	"errors"
-
-	"github.com/guttosm/user-service/internal/repository/mongo"
+	"os"
+	"strconv"
 
 	"github.com/guttosm/user-service/internal/domain/model"
+	"github.com/guttosm/user-service/internal/repository/mongo"
 	repository "github.com/guttosm/user-service/internal/repository/postgres"
 	jwt "github.com/guttosm/user-service/internal/util/jwtutil"
 	"golang.org/x/crypto/bcrypt"
@@ -18,8 +19,8 @@ import (
 //   - Register: creates a new user with a hashed password.
 //   - Login: verifies credentials and returns a signed JWT token.
 type Service interface {
-	Register(email, password, role string) (*model.User, error)
-	Login(email, password string) (string, error)
+	Register(ctx context.Context, email, password, role string) (*model.User, error)
+	Login(ctx context.Context, email, password string) (string, error)
 }
 
 // TokenValidator defines the interface for validating JWT tokens.
@@ -66,8 +67,8 @@ func NewAuthService(repo repository.UserRepository, token jwt.TokenService, logg
 // Returns:
 //   - *model.User: the persisted user with ID.
 //   - error: if creation fails or email already exists.
-func (s *AuthService) Register(email, password, role string) (*model.User, error) {
-	existing, err := s.repo.FindByEmail(email)
+func (s *AuthService) Register(ctx context.Context, email, password, role string) (*model.User, error) {
+	existing, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +76,13 @@ func (s *AuthService) Register(email, password, role string) (*model.User, error
 		return nil, errors.New("user already exists")
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	cost := bcrypt.DefaultCost
+	if v := os.Getenv("BCRYPT_COST"); v != "" {
+		if parsed, perr := strconv.Atoi(v); perr == nil && parsed >= bcrypt.MinCost && parsed <= bcrypt.MaxCost {
+			cost = parsed
+		}
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), cost)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +93,11 @@ func (s *AuthService) Register(email, password, role string) (*model.User, error
 		Role:     role,
 	}
 
-	if err := s.repo.Create(user); err != nil {
+	if err := s.repo.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
-	_ = s.logger.Log(context.Background(), mongo.AuthLog{
+	_ = s.logger.Log(ctx, mongo.AuthLog{
 		EventType: "register",
 		UserID:    user.ID,
 	})
@@ -107,8 +114,8 @@ func (s *AuthService) Register(email, password, role string) (*model.User, error
 // Returns:
 //   - string: signed JWT token if successful.
 //   - error: if authentication fails or token generation fails.
-func (s *AuthService) Login(email, password string) (string, error) {
-	user, err := s.repo.FindByEmail(email)
+func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
+	user, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
 		return "", err
 	}
@@ -125,7 +132,7 @@ func (s *AuthService) Login(email, password string) (string, error) {
 		return "", err
 	}
 
-	_ = s.logger.Log(context.Background(), mongo.AuthLog{
+	_ = s.logger.Log(ctx, mongo.AuthLog{
 		EventType: "login",
 		UserID:    user.ID,
 	})

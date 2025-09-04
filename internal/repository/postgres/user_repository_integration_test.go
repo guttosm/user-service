@@ -144,12 +144,12 @@ func TestPostgresUserRepository_Integration(t *testing.T) {
 			exp: exp{
 				err: false,
 				check: func(t *testing.T, _ *model.User, in args) {
-					got, err := repo.FindByEmail(in.u.Email)
+					got, err := repo.FindByEmail(context.Background(), in.u.Email)
 					require.NoError(t, err)
 					require.NotNil(t, got)
 					assert.Equal(t, in.u.Email, got.Email)
 					assert.Equal(t, in.u.Role, got.Role)
-					assert.NotEmpty(t, got.ID) // should be UUID v7 from DB default
+					assert.NotEmpty(t, got.ID)
 				},
 			},
 		},
@@ -196,8 +196,10 @@ func TestPostgresUserRepository_Integration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			truncateUsers(t, db)
 
+			ctx := context.Background()
+
 			if tc.in.seed != nil {
-				require.NoError(t, repo.Create(tc.in.seed))
+				require.NoError(t, repo.Create(ctx, tc.in.seed))
 				if tc.op == opFindID && tc.in.id == "" {
 					tc.in.id = tc.in.seed.ID
 				}
@@ -205,7 +207,7 @@ func TestPostgresUserRepository_Integration(t *testing.T) {
 
 			switch tc.op {
 			case opCreate:
-				err := repo.Create(tc.in.u)
+				err := repo.Create(ctx, tc.in.u)
 				if tc.exp.err {
 					require.Error(t, err)
 				} else {
@@ -213,23 +215,36 @@ func TestPostgresUserRepository_Integration(t *testing.T) {
 					assert.NotEmpty(t, tc.in.u.ID)
 				}
 				if tc.exp.check != nil {
-					tc.exp.check(t, nil, tc.in)
+					got, _ := repo.FindByEmail(ctx, tc.in.u.Email)
+					_tcIn := tc.in
+					if got != nil {
+						_tcIn.u = got
+					}
+					if tc.exp.check != nil {
+						tc.exp.check(t, got, _tcIn)
+					}
 				}
 
 			case opFindEmail:
-				got, err := repo.FindByEmail(tc.in.email)
+				got, err := repo.FindByEmail(ctx, tc.in.email)
 				require.NoError(t, err)
 				if tc.exp.nil {
 					assert.Nil(t, got)
 				} else {
 					require.NotNil(t, got)
 					if tc.exp.check != nil {
-						tc.exp.check(t, got, tc.in)
+						_tcIn := tc.in
+						if _tcIn.email == "" && got != nil {
+							_tcIn.email = got.Email
+						}
+						if tc.exp.check != nil {
+							tc.exp.check(t, got, _tcIn)
+						}
 					}
 				}
 
 			case opFindID:
-				got, err := repo.FindByID(tc.in.id)
+				got, err := repo.FindByID(ctx, tc.in.id)
 				require.NoError(t, err)
 				if tc.exp.nil {
 					assert.Nil(t, got)

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"regexp"
@@ -161,7 +162,7 @@ func TestPostgresUserRepository(t *testing.T) {
 
 			switch tc.op {
 			case opCreate:
-				err := repo.Create(tc.arg.user)
+				err := repo.Create(context.Background(), tc.arg.user)
 				if tc.exp.err {
 					require.Error(t, err)
 				} else {
@@ -169,7 +170,7 @@ func TestPostgresUserRepository(t *testing.T) {
 					assert.NotEmpty(t, tc.arg.user.ID)
 				}
 			case opFindByEmail:
-				got, err := repo.FindByEmail(tc.arg.email)
+				got, err := repo.FindByEmail(context.Background(), tc.arg.email)
 				if tc.exp.err {
 					require.Error(t, err)
 				} else {
@@ -182,7 +183,7 @@ func TestPostgresUserRepository(t *testing.T) {
 					}
 				}
 			case opFindByID:
-				got, err := repo.FindByID(tc.arg.id)
+				got, err := repo.FindByID(context.Background(), tc.arg.id)
 				if tc.exp.err {
 					require.Error(t, err)
 				} else {

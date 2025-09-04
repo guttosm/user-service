@@ -50,6 +50,9 @@ help: ## Show this help
 	$(call print-target,docker-down,       Docker Compose down)
 	$(call print-target,docker-restart,    Restart Compose stack)
 	$(call print-target,clean,             Clean artifacts)
+	$(call print-target,vet,                Run go vet static analysis)
+	$(call print-target,staticcheck,        Run staticcheck static analysis)
+	$(call print-target,analyze,            Run all static analysis tools)
 	@echo
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -133,6 +136,15 @@ docker-restart: docker-down docker-up ## Restart Compose stack
 clean: ## Clean compiled files and coverage artifacts
 	rm -f $(APP_NAME) $(COVER_PROFILE)
 
+vet: ## Run go vet static analysis
+	$(GO) vet ./...
+
+staticcheck: ## Run staticcheck static analysis
+	@which staticcheck > /dev/null || (echo "Installing staticcheck..." && $(GO) install honnef.co/go/tools/cmd/staticcheck@latest)
+	staticcheck ./...
+
+analyze: vet staticcheck lint ## Run all static analysis tools
+
 .PHONY: help setup install run build fmt tidy lint swagger \
         test test-unit test-integration coverage coverage-html \
-        migrate docker-up docker-down docker-restart clean
+        migrate docker-up docker-down docker-restart clean vet staticcheck analyze

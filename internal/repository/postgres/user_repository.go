@@ -1,8 +1,11 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/guttosm/user-service/internal/domain/model"
 )
@@ -21,7 +24,7 @@ type UserRepository interface {
 	//
 	// Returns:
 	//   - error: Any error encountered during the insert operation.
-	Create(user *model.User) error
+	Create(ctx context.Context, user *model.User) error
 
 	// FindByEmail retrieves a user based on their email address.
 	//
@@ -31,7 +34,7 @@ type UserRepository interface {
 	// Returns:
 	//   - *model.User: The found user, or nil if not found.
 	//   - error: Any error encountered during the query.
-	FindByEmail(email string) (*model.User, error)
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
 
 	// FindByID retrieves a user based on their unique identifier.
 	//
@@ -41,7 +44,7 @@ type UserRepository interface {
 	// Returns:
 	//   - *model.User: The found user, or nil if not found.
 	//   - error: Any error encountered during the query.
-	FindByID(id string) (*model.User, error)
+	FindByID(ctx context.Context, id string) (*model.User, error)
 }
 
 // PostgresUserRepository provides PostgreSQL-based implementation for user persistence.
@@ -67,13 +70,14 @@ func NewUserRepository(db *sql.DB) *PostgresUserRepository {
 //
 // Returns:
 //   - error: Any error that occurred during the insert operation.
-func (r *PostgresUserRepository) Create(user *model.User) error {
-	query := `
-		INSERT INTO users (email, password, role)
-		VALUES ($1, $2, $3)
-		RETURNING id;
-	`
-	return r.db.QueryRow(query, user.Email, user.Password, user.Role).Scan(&user.ID)
+func (r *PostgresUserRepository) Create(ctx context.Context, user *model.User) error {
+	normalized := strings.ToLower(user.Email)
+	query := `INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id;`
+	if err := r.db.QueryRowContext(ctx, query, normalized, user.Password, user.Role).Scan(&user.ID); err != nil {
+		return fmt.Errorf("create user: %w", err)
+	}
+	user.Email = normalized
+	return nil
 }
 
 // FindByEmail returns a user by their email address.
@@ -84,18 +88,15 @@ func (r *PostgresUserRepository) Create(user *model.User) error {
 // Returns:
 //   - *model.User: The user found, or nil if not found.
 //   - error: Any error encountered during the query.
-func (r *PostgresUserRepository) FindByEmail(email string) (*model.User, error) {
+func (r *PostgresUserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	query := `SELECT id, email, password, role FROM users WHERE email = $1`
-
-	row := r.db.QueryRow(query, email)
-
+	row := r.db.QueryRowContext(ctx, query, strings.ToLower(email))
 	var user model.User
-	err := row.Scan(&user.ID, &user.Email, &user.Password, &user.Role)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
+	if err := row.Scan(&user.ID, &user.Email, &user.Password, &user.Role); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find by email: %w", err)
 	}
 	return &user, nil
 }
@@ -108,18 +109,15 @@ func (r *PostgresUserRepository) FindByEmail(email string) (*model.User, error) 
 // Returns:
 //   - *model.User: The user found, or nil if not found.
 //   - error: Any error encountered during the query.
-func (r *PostgresUserRepository) FindByID(id string) (*model.User, error) {
+func (r *PostgresUserRepository) FindByID(ctx context.Context, id string) (*model.User, error) {
 	query := `SELECT id, email, password, role FROM users WHERE id = $1`
-
-	row := r.db.QueryRow(query, id)
-
+	row := r.db.QueryRowContext(ctx, query, id)
 	var user model.User
-	err := row.Scan(&user.ID, &user.Email, &user.Password, &user.Role)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
+	if err := row.Scan(&user.ID, &user.Email, &user.Password, &user.Role); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find by id: %w", err)
 	}
 	return &user, nil
 }
