@@ -16,7 +16,7 @@ func NewMockUserRepository(t interface {
 	Cleanup(func())
 }) *MockUserRepository {
 	mock := &MockUserRepository{}
-	mock.Mock.Test(t)
+	mock.Test(t)
 
 	t.Cleanup(func() { mock.AssertExpectations(t) })
 

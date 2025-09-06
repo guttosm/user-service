@@ -17,7 +17,7 @@ func NewMockAuthService(t interface {
 	Cleanup(func())
 }) *MockAuthService {
 	m := &MockAuthService{}
-	m.Mock.Test(t)
+	m.Test(t)
 	// ensure expectations asserted
 	t.Cleanup(func() { m.AssertExpectations(t) })
 	return m

@@ -15,7 +15,7 @@ func NewMockTokenService(t interface {
 	Cleanup(func())
 }) *MockTokenService {
 	mock := &MockTokenService{}
-	mock.Mock.Test(t)
+	mock.Test(t)
 
 	t.Cleanup(func() { mock.AssertExpectations(t) })
 
