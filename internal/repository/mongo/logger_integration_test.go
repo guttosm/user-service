@@ -135,6 +135,50 @@ func TestLogger_Integration(t *testing.T) {
 			},
 			out: out{wantErr: false, expectInserted: true},
 		},
+		{
+			name: "server error: no retry and fails",
+			in: in{
+				event: AuthLog{EventType: "login_failure", UserID: "u-err"},
+				setup: func(t *testing.T) {
+					_ = db.Collection(col).Drop(context.Background())
+
+					admin := client.Database("admin")
+					cmd := bson.D{
+						{"configureFailPoint", "failCommand"},
+						{"mode", bson.D{{"times", 1}}},
+						{"data", bson.D{
+							{"failCommands", bson.A{"insert"}},
+							{"errorCode", 11600}, // InterruptedAtShutdown (server-side error, not network)
+						}},
+					}
+					var res bson.M
+					require.NoError(t, admin.RunCommand(context.Background(), cmd).Decode(&res))
+				},
+			},
+			out: out{wantErr: true, expectInserted: false},
+		},
+		{
+			name: "network error more than 3 times: fails after retries",
+			in: in{
+				event: AuthLog{EventType: "login_failure", UserID: "u-netfail"},
+				setup: func(t *testing.T) {
+					_ = db.Collection(col).Drop(context.Background())
+
+					admin := client.Database("admin")
+					cmd := bson.D{
+						{"configureFailPoint", "failCommand"},
+						{"mode", bson.D{{"times", 5}}}, // more than our retry count (3)
+						{"data", bson.D{
+							{"failCommands", bson.A{"insert"}},
+							{"closeConnection", true}, // network style error
+						}},
+					}
+					var res bson.M
+					require.NoError(t, admin.RunCommand(context.Background(), cmd).Decode(&res))
+				},
+			},
+			out: out{wantErr: true, expectInserted: false},
+		},
 	}
 
 	for _, tc := range tests {

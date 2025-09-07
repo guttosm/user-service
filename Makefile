@@ -11,11 +11,14 @@ SWAG                ?= github.com/swaggo/swag/cmd/swag
 SWAG_BIN            := $(shell $(GO) env GOPATH)/bin/swag
 
 # Exclude packages (regex passed to grep -Ev). Adjust as needed.
-# Example excludes: models & DTOs
-EXCLUDE_PKGS_REGEX ?= internal/domain/model|internal/dto
+# Example excludes: domain models & DTOs (data-only)
+EXCLUDE_PKGS_REGEX ?= internal/domain/model|internal/domain/dto
 
 # All packages except excluded ones
 PKGS := $(shell $(GO) list ./... | grep -Ev '$(EXCLUDE_PKGS_REGEX)')
+
+# Integration packages (respect exclusions too)
+PKGS_INT := $(PKGS)
 
 # Common test flags
 TEST_FLAGS       ?= -race -shuffle=on -count=1
@@ -95,7 +98,7 @@ test: ## Run ALL tests (unit + integration)
 	@echo "→ Unit tests"
 	$(GO) test $(PKGS) $(TEST_FLAGS) -coverprofile=$(COVER_PROFILE) -covermode=$(COVER_MODE)
 	@echo "→ Integration tests"
-	$(GO) test -tags=integration ./... -count=1
+	$(GO) test -tags=integration $(PKGS_INT) -count=1
 
 test-unit: ## Run ONLY unit tests, exclude $(EXCLUDE_PKGS_REGEX)
 	@echo "→ Unit tests (excluding: $(EXCLUDE_PKGS_REGEX))"
@@ -103,13 +106,38 @@ test-unit: ## Run ONLY unit tests, exclude $(EXCLUDE_PKGS_REGEX)
 
 test-integration: ## Run ONLY integration tests (tag: integration)
 	@echo "→ Integration tests"
-	$(GO) test -tags=integration ./... -count=1
+	$(GO) test -tags=integration $(PKGS_INT) -count=1
 
 coverage: ## Show coverage summary
 	$(GO) tool cover -func=$(COVER_PROFILE)
 
 coverage-html: ## Open HTML coverage report
 	$(GO) tool cover -html=$(COVER_PROFILE)
+
+# Detailed per-package coverage view (excludes $(EXCLUDE_PKGS_REGEX))
+MIN_COVERAGE ?= 60.0
+coverage-matrix: ## Show per-package coverage and highlight those below MIN_COVERAGE
+	@tmpdir=$$(mktemp -d); \
+	failed=0; \
+	for p in $(PKGS); do \
+	  prof=$$tmpdir/$$(echo $$p | tr '/' '_').out; \
+	  $(GO) test $$p -coverprofile=$$prof -covermode=$(COVER_MODE) >/dev/null; \
+	  pct=$$( $(GO) tool cover -func=$$prof | awk '/total:/ {print $$3}' | sed 's/%//' ); \
+	  printf "%-60s %6.2f%%\n" "$$p" "$$pct"; \
+	  awk -v x=$$pct -v min=$(MIN_COVERAGE) 'BEGIN{ if (x+0 < min+0) exit 1; }' || failed=1; \
+	done | sort -k2 -n; \
+	[ $$failed -eq 0 ] || (echo "\nSome packages below MIN_COVERAGE=$(MIN_COVERAGE)%" && exit 1)
+
+coverage-it: ## Generate coverage for integration-tagged tests per package
+	@tmpdir=$$(mktemp -d); \
+	for p in $(PKGS_INT); do \
+	  prof=$$tmpdir/$$(echo $$p | tr '/' '_').it.out; \
+	  $(GO) test -tags=integration $$p -coverprofile=$$prof -covermode=$(COVER_MODE) -count=1 >/dev/null || true; \
+	  if [ -f $$prof ]; then \
+	    pct=$$( $(GO) tool cover -func=$$prof | awk '/total:/ {print $$3}' | sed 's/%//' ); \
+	    printf "[IT] %-56s %6.2f%%\n" "$$p" "$$pct"; \
+	  fi; \
+	done | sort -k2 -n
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Migrations & Docker

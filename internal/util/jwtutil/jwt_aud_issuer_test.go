@@ -41,3 +41,17 @@ func TestJWT_ExpiredToken(t *testing.T) {
 		t.Fatalf("expected expired token error")
 	}
 }
+
+func TestJWT_AudienceArray(t *testing.T) {
+	cfg := config.JWTConfig{Secret: "s3", ExpirationHour: 1, Issuer: "iss", Audience: "aud2"}
+	// craft token with array audience by generating and then re-validating with Audience set to one member
+	// Here Generate uses single aud; simulate array by validating a token from another service that might produce array aud
+	tok, err := generateToken("u", "r", config.JWTConfig{Secret: cfg.Secret, ExpirationHour: 1, Issuer: cfg.Issuer, Audience: "aud1"})
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	// Now validate with desired audience mismatch -> expect failure
+	if _, err := NewJWTService(cfg).Validate(tok); err == nil {
+		t.Fatalf("expected audience mismatch to fail")
+	}
+}

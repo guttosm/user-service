@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type AuthLog struct {
@@ -16,15 +17,23 @@ type AuthLog struct {
 	Metadata  any       `bson:"metadata,omitempty"`
 }
 
-type Logger struct {
-	collection *mongo.Collection
+type mongoInserter interface {
+	InsertOne(ctx context.Context, document interface{}, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error)
 }
+
+type Logger struct{ collection mongoInserter }
+
+// indirection for testability
+var isNetworkErr = mongo.IsNetworkError
 
 func NewLogger(db *mongo.Database, collectionName string) *Logger {
 	return &Logger{
 		collection: db.Collection(collectionName),
 	}
 }
+
+// NewTestLogger returns a Logger with a custom inserter. For tests only.
+func NewTestLogger(inserter mongoInserter) *Logger { return &Logger{collection: inserter} }
 
 // validateAuthLog checks required fields.
 func validateAuthLog(event AuthLog) error {
@@ -42,7 +51,7 @@ func (l *Logger) insertWithRetry(ctx context.Context, event AuthLog) error {
 	var err error
 	for i := 0; i < 3; i++ {
 		_, err = l.collection.InsertOne(ctx, event)
-		if err == nil || !mongo.IsNetworkError(err) {
+		if err == nil || !isNetworkErr(err) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
