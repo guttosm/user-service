@@ -1,4 +1,6 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=guttosm_user-service&metric=coverage)](https://sonarcloud.io/summary/new_code?id=guttosm_user-service)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=guttosm_user-service&metric=bugs)](https://sonarcloud.io/summary/new_code?id=guttosm_user-service)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=guttosm_user-service&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=guttosm_user-service)
 
 # 🔐 user-service
 
@@ -145,12 +147,6 @@ user-service/
 
 ---
 
-## 📄 License
-
-MIT © 2025 Gustavo Moraes
-
----
-
 ## 📡 API Endpoints (Core)
 
 | Method | Path        | Description            |
@@ -195,3 +191,8 @@ make analyze       # Run all static analysis tools above
 
 ---
 
+## 📄 License
+
+MIT © 2025 Gustavo Moraes
+
+---
