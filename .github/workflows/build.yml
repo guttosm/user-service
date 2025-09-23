@@ -41,7 +41,7 @@ jobs:
           go build -o user-service ./cmd/main.go
 
   test:
-    name: Test & Coverage
+    name: Run Tests & SonarCloud Analysis
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -103,10 +103,9 @@ jobs:
           $HOME/go/bin/goose -dir db/migrations up
 
   docker:
-    name: Build Docker Image
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: migrate
-    if: startsWith(github.ref, 'refs/tags/v') # Only runs on version tags
+    needs: [test, migrate]
     steps:
       - uses: actions/checkout@v4
 
@@ -117,8 +116,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
+      - name: Set image tags
+        id: vars
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}:${GITHUB_REF##*/}
-          docker build -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
+          IMAGE=ghcr.io/${{ github.repository }}
+          SHA_TAG=sha-${GITHUB_SHA::7}
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION_TAG=${GITHUB_REF##*/}
+          else
+            VERSION_TAG=dev
+          fi
+
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          echo "SHA_TAG=$SHA_TAG" >> $GITHUB_ENV
+          echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_ENV
+
+      - name: Build and push image
+        run: |
+          docker build -t $IMAGE:$SHA_TAG -t $IMAGE:$VERSION_TAG .
+          docker push $IMAGE:$SHA_TAG
+          docker push $IMAGE:$VERSION_TAG
